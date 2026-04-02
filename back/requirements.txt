@@ -1,0 +1,29 @@
+# Core
+flask==2.3.3
+flask-cors==4.0.0
+flask-sqlalchemy==3.1.1
+flask-migrate==4.0.5
+
+# Database
+psycopg2-binary==2.9.9
+geoalchemy2==0.14.4
+shapely==2.0.2
+clickhouse-connect==0.6.0
+
+# H3 (геоиндексация)
+h3==3.7.6
+h3-pyo3==0.1.0
+
+# Utils
+python-dotenv==1.0.0
+requests==2.31.0
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-flask==1.2.0
+pytest-mock==3.12.0
+pytest-watch==4.2.0
+
+# Development
+watchdog==3.0.0

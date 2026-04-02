@@ -1,41 +1,253 @@
-back/build_Vasileostrovskiy.geojson
-back/distr_emr_matrix_test_1.json
-front/node_modules
-back/venv
-.idea
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ====================
+# Python
+# ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+back/venv/
+pythonenv*
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Python virtual environments
+venv/
+.venv/
+env/
+.env/
+.virtualenv/
 
-# testing
-/coverage
+# Python cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.coverage
+.coverage.*
+.coverage_report/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.log
+*.pot
+*.pyc
+*.pyo
 
-# production
-/build
-
-# misc
-.DS_Store
+# ====================
+# Flask
+# ====================
+instance/
+.webassets-cache
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+flask_session/
+secrets.py
 
+# ====================
+# Database
+# ====================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.dump
+*.sql
+*.psql
+
+# PostgreSQL dumps
+*.backup
+*.dump
+
+# ====================
+# IDE
+# ====================
+# PyCharm
+.idea/
+.idea_modules/
+*.iml
+*.ipr
+*.iws
+/shelf/
+/workspace.xml
+.idea/inspectionProfiles/
+.idea/vcs.xml
+.idea/misc.xml
+.idea/workspace.xml
+.idea/dataSources/
+.idea/dataSources.local.xml
+.httpRequests/
+
+# VSCode
+.vscode/
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+.elc
+auto-save-list
+tramp
+.\#*
+
+# Vim
+*.swp
+*.swo
+*.swn
+*.un~
+
+# ====================
+# Frontend / Node
+# ====================
+front/node_modules/
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-# Default ignored files
-/shelf/
-/workspace.xml
-# Editor-based HTTP Client requests
-/httpRequests/
-# Datasource local storage ignored files
-/dataSources/
-/dataSources.local.xml
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Frontend build
+/build
+/dist
+/front/build
+/front/dist
+.next/
+out/
+.nuxt/
+.cache/
+
+# Frontend cache
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# Frontend misc
+.DS_Store
+*.pem
+
+# ====================
+# Backend build & data
+# ====================
 back/build_Vasileostrovskiy.geojson
 back/distr_emr_matrix_test_1.json
-front/node_modules
-back/venv
+back/*.geojson
+back/*.json
+!back/requirements*.json
+!back/package*.json
 
+# ====================
+# Logs
+# ====================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log.*
+
+# ====================
+# Testing
+# ====================
+/coverage
+.coverage
+.coverage.*
+.coverage_report/
+htmlcov/
+.tox/
+.pytest_cache/
+.coverage_report/
+*.cover
+*.pytest_cache/
+
+# ====================
+# Docker
+# ====================
+*.pid
+docker-compose.override.yml
+.dockerignore
+docker/volumes/
+
+# ====================
+# Environment files
+# ====================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+.env.test
+*.env
+.env.backup
+
+# ====================
+# OS generated files
+# ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.bak
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ====================
+# Project specific
+# ====================
+# Data files
+*.geojson
+*.json
+!package.json
+!package-lock.json
+!requirements*.json
+!tsconfig.json
+!jsconfig.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Uploads
+uploads/
+media/
+static/uploads/
+
+# Backup files
+*.backup
+*.old
+*.orig
+
+# Secrets
+secrets.py
+config.py.local
+*.key
+*.pem
+*.crt

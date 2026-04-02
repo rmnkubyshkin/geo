@@ -100,13 +100,14 @@ export default function Desk() {
 
 
     const layers = useMemo(() => {
-
         const deckLayers = [];
         if (typeLayer === '3D') {
             deckLayers.push(new ColumnLayer({
                 id: 'cubes-3d',
                 data: pointJsonData,
-                getPosition: d => [Number(d.longitude), Number(d.latitude), Number(d.height)],
+                getPosition: d => {
+                    return [Number(d.longitude), Number(d.latitude), Number(d.altitude || 0)];
+                },
                 getElevation: 1.2,
                 radius: 1,
                 diskResolution: 4,
@@ -120,7 +121,7 @@ export default function Desk() {
                     id: 'buildings-layer',
                     data: geojsonData,
                     extruded: true,
-                    getElevation: d => Number(d.properties.AGL),
+                    getElevation: d => Number(d.properties.height || 0),
                     getFillColor: [136, 8, 8, 200],
                     parameters: {
                         cull: true
@@ -132,7 +133,11 @@ export default function Desk() {
                 deckLayers.push(new SquareScatterplotLayer({
                     id: 'sq-2d',
                     data: pointJsonData,
-                    getPosition: d => [d.longitude, d.latitude, 0.01],
+                    getPosition: d => {
+                        const coords = d.geometry?.coordinates || [d.longitude, d.latitude];
+                        const [lon, lat] = coords;
+                        return [Number(lon), Number(lat), 0.01];
+                    },
                     getRadius: 2,
                     getFillColor: [255, 255, 0, 255],
                 }));
