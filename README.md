@@ -33,8 +33,8 @@ pytest tests/ -v
 ```
 ### API
 
-/api/coordinates/points	GET	Получение точек (ClickHouse)
-/api/coordinates/geo	GET	Получение зданий (PostgreSQL)
+- /api/coordinates/points	GET	Получение точек (ClickHouse)  
+- /api/coordinates/geo	GET	Получение зданий (PostgreSQL)
 
 ### Структура
 text
