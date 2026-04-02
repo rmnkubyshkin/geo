@@ -16,17 +16,21 @@
 cd back
 pip install -r requirements.txt
 flask run
+```
 
 ### Frontend
 
+```bash
 cd front
 npm install
 npm start
+```
 
 ### Тесты
 
+```bash
 pytest tests/ -v
-
+```
 ### API
 
 /api/coordinates/points	GET	Получение точек (ClickHouse)
@@ -34,6 +38,6 @@ pytest tests/ -v
 
 ### Структура
 text
-back/           # Flask backend
-front/          # React frontend  
+back/           # Flask backend   
+front/          # React frontend    
 tests/          # Тесты
