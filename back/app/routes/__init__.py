@@ -1,13 +1,33 @@
 from __future__ import annotations
 import json
-from flask import Blueprint, jsonify
+from flask import Blueprint, request, jsonify, g
 from app.models import Building
 from geoalchemy2.shape import to_shape
 from app.extensions import ch
+from app.scripts.timer import timer_decorator
 bp = Blueprint("main", __name__)
+import time
+
+
+def log_request_time(start_time: float, endpoint: str):
+    duration = (time.time() - start_time) * 1000
+    print(f"[API TIMER] {endpoint} - {duration:.2f} мс")
+
+@bp.before_request
+@timer_decorator
+def before_request():
+    g.start_time = time.time()
+
+@bp.after_request
+def after_request(response):
+    if hasattr(g, 'start_time'):
+        duration = (time.time() - g.start_time) * 1000
+        print(f"[API TIMER] {request.method} {request.path} - {duration:.2f} мс")
+    return response
 
 
 @bp.route("/api/coordinates/points", methods=["GET"])
+@timer_decorator
 def get_points_coordinates():
     if not ch.client:
         return jsonify({"error": "Database connection error"}), 500
