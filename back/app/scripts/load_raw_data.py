@@ -14,7 +14,7 @@ from geoalchemy2.shape import from_shape
 import h3
 import h3.api.basic_int as h3_int
 from app.extensions import ch
-
+from app.scripts.clickhouse_setup import ensure_clickhouse_tables
 
 def _raw_data_dir() -> Path:
     return Path(current_app.root_path) / "raw_data"
@@ -108,28 +108,59 @@ def _load_buildings_from_file(path: Path) -> None:
         db.session.commit()
         print(f"Загружено {len(to_insert)} зданий в PostgreSQL")
 
+
 def reload_points_data():
-    if ch.client:
-        try:
-            ch.client.query("DROP TABLE IF EXISTS points_h3")
-            print("Старая таблица удалена")
-        except Exception as e:
-            print(f"Ошибка удаления: {e}")
+    if not ch.client:
+        print("ClickHouse клиент не инициализирован")
+        return
+    
+    try:
+        if not ensure_clickhouse_tables():
+            print("Не удалось подготовить таблицу")
+            return
+        
+        ch.client.command("TRUNCATE TABLE IF EXISTS points_h3")
+        print("Старые данные удалены")
+        
+        raw_dir = _raw_data_dir()
+        for path in sorted(raw_dir.iterdir()):
+            if path.is_file() and path.name.lower().startswith("points") and path.name.lower().endswith(".json"):
+                _load_points_to_clickhouse(path)
+                break
+                
+    except Exception as e:
+        print(f"Ошибка перезагрузки: {e}")
+
 
 def _load_points_to_clickhouse(path: Path) -> None:
     if not ch.client:
         print("ClickHouse клиент не инициализирован.")
         return
     
+    if not ensure_clickhouse_tables():
+        print("Не удалось создать/проверить таблицу")
+        return
+    
     payload = _load_json_any_encoding(path)
     items = payload.get("data", [])
     if not items:
+        print(f"Нет данных в файле {path}")
         return
 
     H3_RESOLUTION = 9
-    data_for_ch = []
+    ALTITUDE_BITS = 16
+    ALTITUDE_SHIFT = 64 - ALTITUDE_BITS
+    MIN_ALT = -1000
+    MAX_ALT = 10000
+    ALT_RANGE = MAX_ALT - MIN_ALT
+    MAX_NORMALIZED = (1 << ALTITUDE_BITS) - 1
     
-    for item in items:
+    data_for_ch = []
+    errors = 0
+    
+    print(f"Начинаем загрузку {len(items)} точек...")
+    
+    for idx, item in enumerate(items):
         lat = item.get('latitude')
         lon = item.get('longitude')
         alt = item.get('height')
@@ -138,17 +169,32 @@ def _load_points_to_clickhouse(path: Path) -> None:
         if lat is not None and lon is not None:
             try:
                 h3_index = h3_int.latlng_to_cell(float(lat), float(lon), H3_RESOLUTION)
-
+                
+                altitude = float(alt) if alt is not None else 0.0
+                
+                if altitude < MIN_ALT:
+                    altitude = MIN_ALT
+                if altitude > MAX_ALT:
+                    altitude = MAX_ALT
+                
+                normalized_alt = int(((altitude - MIN_ALT) / ALT_RANGE) * MAX_NORMALIZED)
+                normalized_alt = min(normalized_alt, MAX_NORMALIZED)
+                
+                packed_index = (h3_index & ((1 << ALTITUDE_SHIFT) - 1)) | (normalized_alt << ALTITUDE_SHIFT)
+                
                 data_for_ch.append([
-                    int(h3_index),                         
-                    datetime.now(timezone.utc).replace(microsecond=0), 
-                    float(lon),                           
-                    float(lat),                           
-                    float(alt),                           
+                    int(packed_index),
+                    datetime.now(timezone.utc).replace(microsecond=0),
+                    float(lon),
+                    float(lat),
+                    altitude,
                     json.dumps(props, ensure_ascii=False)
                 ])
+                
+                    
             except Exception as e:
-                print(f"Ошибка обработки точки: {e}")
+                errors += 1
+                print(f"Ошибка обработки точки {idx}: {e}")
                 continue
 
     if data_for_ch:
@@ -166,5 +212,9 @@ def _load_points_to_clickhouse(path: Path) -> None:
                 ]
             )
             print(f"Загружено {len(data_for_ch)} точек в ClickHouse")
+            print(f"Ошибок: {errors}")
         except Exception as e:
             print(f"Ошибка вставки в ClickHouse: {e}")
+    else:
+        print("Нет данных для вставки")
+        print(f"Ошибок: {errors}")
