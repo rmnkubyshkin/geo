@@ -18,11 +18,24 @@ def init_clickhouse_tables():
     """
     
     try:
-        ch.client.command(create_table_query)  # IF NOT EXISTS делает проверку сам
-        print("Таблица points_h3 готова")
+        ch.client.command(create_table_query)
+        print("Таблица points_h3 создана/проверена")
         return True
     except Exception as e:
         print(f"Ошибка создания таблицы: {e}")
         return False
 
-ensure_clickhouse_tables = init_clickhouse_tables
+
+def ensure_clickhouse_tables():
+    if not ch.client:
+        print("ClickHouse клиент не инициализирован")
+        return False
+    
+    try:
+        result = ch.client.command("EXISTS TABLE points_h3")
+        if result == 0:
+            return init_clickhouse_tables()
+        return True
+    except Exception as e:
+        print(f"Ошибка проверки: {e}")
+        return init_clickhouse_tables()

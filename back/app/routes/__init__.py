@@ -32,7 +32,7 @@ def get_points_coordinates():
     if not ch.client:
         return jsonify({"error": "Database connection error"}), 500
 
-    query = "SELECT longitude, latitude, altitude FROM default.points_h3 LIMIT 100000"
+    query = "SELECT longitude, latitude, altitude FROM default.points_h3 LIMIT 1000"
     
     try:
         result = ch.client.query(query)
@@ -88,24 +88,17 @@ def get_geo_coordinates():
     return jsonify(collection)
 
 @bp.route("/api/points/h3/indexes/simple", methods=["GET"])
-@timer_decorator
 def get_h3_indexes_simple():
-    """Получить только H3 индексы (простой список)"""
     if not ch.client:
         return jsonify({"error": "Database connection error"}), 500
     
     limit = request.args.get('limit', 10000, type=int)
     
-    query = "SELECT h3_index FROM default.points_h3 LIMIT %(limit)s"
-    
     try:
-        # Для HTTP клиента используем query метод
-        result = ch.client.query(query, parameters={'limit': limit})
+        result = ch.client.query(f"SELECT h3_index, altitude FROM points_h3 LIMIT {limit}")
         
-        indexes = [row[0] for row in result.result_rows]
-        
-        return jsonify(indexes)
+        data = [{"h3Index": str(row[0]), "altitude": row[1]} for row in result.result_rows]
+        return jsonify(data)
     except Exception as e:
-        print(f"Ошибка: {e}")
         return jsonify({"error": str(e)}), 500
 
