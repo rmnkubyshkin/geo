@@ -251,3 +251,41 @@ config.py.local
 *.key
 *.pem
 *.crt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+back/venv/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+back/instance/*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
