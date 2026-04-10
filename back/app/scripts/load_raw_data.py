@@ -108,8 +108,8 @@ def _load_buildings_from_file(path: Path) -> None:
         db.session.commit()
         print(f"Загружено {len(to_insert)} зданий в PostgreSQL")
 
-
 def reload_points_data():
+    """Перезагружает данные в ClickHouse"""
     if not ch.client:
         print("ClickHouse клиент не инициализирован")
         return
@@ -119,7 +119,7 @@ def reload_points_data():
             print("Не удалось подготовить таблицу")
             return
         
-        ch.client.command("TRUNCATE TABLE IF EXISTS points_h3")
+        ch.client.query("TRUNCATE TABLE IF EXISTS points_h3")
         print("Старые данные удалены")
         
         raw_dir = _raw_data_dir()
@@ -147,18 +147,12 @@ def _load_points_to_clickhouse(path: Path) -> None:
         print(f"Нет данных в файле {path}")
         return
 
-    H3_RESOLUTION = 9
-    ALTITUDE_BITS = 16
-    ALTITUDE_SHIFT = 64 - ALTITUDE_BITS
-    MIN_ALT = -1000
-    MAX_ALT = 10000
-    ALT_RANGE = MAX_ALT - MIN_ALT
-    MAX_NORMALIZED = (1 << ALTITUDE_BITS) - 1
-    
+    H3_RESOLUTION = 15
     data_for_ch = []
     errors = 0
     
     print(f"Начинаем загрузку {len(items)} точек...")
+    print(f"Resolution H3: {H3_RESOLUTION}")
     
     for idx, item in enumerate(items):
         lat = item.get('latitude')
@@ -169,21 +163,16 @@ def _load_points_to_clickhouse(path: Path) -> None:
         if lat is not None and lon is not None:
             try:
                 h3_index = h3_int.latlng_to_cell(float(lat), float(lon), H3_RESOLUTION)
-                
                 altitude = float(alt) if alt is not None else 0.0
                 
-                if altitude < MIN_ALT:
-                    altitude = MIN_ALT
-                if altitude > MAX_ALT:
-                    altitude = MAX_ALT
-                
-                normalized_alt = int(((altitude - MIN_ALT) / ALT_RANGE) * MAX_NORMALIZED)
-                normalized_alt = min(normalized_alt, MAX_NORMALIZED)
-                
-                packed_index = (h3_index & ((1 << ALTITUDE_SHIFT) - 1)) | (normalized_alt << ALTITUDE_SHIFT)
+                if idx < 5:
+                    print(f"Точка {idx}:")
+                    print(f"  H3 индекс: {h3_index}")
+                    print(f"  Высота: {altitude}")
+                    print(f"  Координаты: ({lat}, {lon})")
                 
                 data_for_ch.append([
-                    int(packed_index),
+                    int(h3_index),
                     datetime.now(timezone.utc).replace(microsecond=0),
                     float(lon),
                     float(lat),
@@ -213,6 +202,7 @@ def _load_points_to_clickhouse(path: Path) -> None:
             )
             print(f"Загружено {len(data_for_ch)} точек в ClickHouse")
             print(f"Ошибок: {errors}")
+            
         except Exception as e:
             print(f"Ошибка вставки в ClickHouse: {e}")
     else:

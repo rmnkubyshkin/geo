@@ -11,7 +11,7 @@ from app.extensions import db, ch
 def create_app(config_object: type = DevelopmentConfig) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_object)
-    #reload_points_data()
+    # reload_points_data()
     db.init_app(app)
     ch.init_app(app)
     migrate.init_app(app, db)
