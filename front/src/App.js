@@ -1,11 +1,11 @@
 import './App.css';
-import Desk from "./Desk";
-import React from "react";
+import MapContainer from './map/utils/MapContainer';
+
 
 export const App = () => {
     return (
             <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                <Desk />
+                <MapContainer />
             </div>
     );
 };
