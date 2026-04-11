@@ -1,0 +1,29 @@
+{
+  "name": "geo",
+  "version": "1.0.0",
+  "description": "Платформа для визуализации геоданных (здания и точки).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "concurrently --raw \"npm run start --prefix front\" \"python back/run.py\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rmnkubyshkin/geo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rmnkubyshkin/geo/issues"
+  },
+  "homepage": "https://github.com/rmnkubyshkin/geo#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "typescript-eslint": "^8.58.1"
+  }
+}
