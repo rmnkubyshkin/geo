@@ -10,7 +10,7 @@ export const POLYGON_LAYER_STYLE = {
     id: 'mapbox-polygon-layer',
     type: 'fill',
     paint: {
-        'fill-color': '#880808',
+        'fill-color': '#787777',
         'fill-opacity': 0.5,
         'fill-outline-color': '#ffffff'
     },

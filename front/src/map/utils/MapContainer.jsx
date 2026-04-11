@@ -1,10 +1,10 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Map, Source, Layer } from 'react-map-gl/maplibre';
 import { Button } from "@mui/material";
-import { ColumnLayer, GeoJsonLayer } from '@deck.gl/layers';
+import { GeoJsonLayer } from '@deck.gl/layers';
+import { HexagonLayer } from "@deck.gl/aggregation-layers";
 
 import DeckGLOverlay from './DeckGLOverlay';
-import { SquareScatterplotLayer } from '../layers/SquareScatterplotLayer';
 import { getH3Coordinates } from './h3Utils';
 import { INITIAL_VIEW_STATE, POLYGON_LAYER_STYLE, MAP_STYLE } from './constants';
 import { geoApi } from '../../services/geoApi';
@@ -57,35 +57,59 @@ export default function MapContainer() {
     const layers = useMemo(() => {
         if (typeLayer === '3D') {
             return [
-                new ColumnLayer({
-                    id: 'cubes-3d',
+                new HexagonLayer({
+                    id: "hexagon-3d",
                     data: displayPoints,
-                    getPosition: d => [Number(d.longitude), Number(d.latitude), Number(d.altitude || 0)],
-                    getElevation: 1.2,
-                    radius: 1,
-                    diskResolution: 4,
-                    radiusUnits: 'meters',
-                    opacity: 0.3,
-                    getFillColor: [255, 255, 0, 255],
+                    getPosition: d => [d.longitude, d.latitude],
+                    getElevation: d => d.altitude || 1,
+                    radius: 3,
+                    radiusUnits: "meters",
+                    colorRange: [
+                        [0, 255, 0, 200], 
+                        [255, 255, 0, 200],    
+                        [255, 0, 0, 200]       
+                    ],
+                    elevationScale: 0.5,    
+                    elevationRange: [0, 100],
+                    opacity: 0.8,
                     extruded: true,
-                }),
+                    pickable: true
+                    }),
                 geojsonData && new GeoJsonLayer({
                     id: 'buildings-layer',
                     data: geojsonData,
                     extruded: true,
                     getElevation: d => Number(d.properties.height || 0),
-                    getFillColor: [136, 8, 8, 200],
+                    getFillColor: [180, 180, 180, 180], 
+                    getLineColor: [255, 255, 255, 200],
+                    lineWidthUnits: "pixels",
+                    lineWidth: 1,
+                    material: {
+                        ambient: 0.6,
+                        diffuse: 0.6,
+                        shininess: 90,
+                        specularColor: [100, 100, 100]
+                    }
                 })
             ].filter(Boolean);
         }
 
         return [
-            new SquareScatterplotLayer({
-                id: 'sq-2d',
+             new HexagonLayer({
+                id: "hexagon-2d",
                 data: displayPoints,
-                getPosition: d => [Number(d.longitude), Number(d.latitude), 0.01],
-                getRadius: 2,
-                getFillColor: [255, 255, 0, 255],
+                getPosition: d => [d.longitude, d.latitude],
+                radius: 3,
+                colorRange: [
+                    [0, 200, 0, 150], 
+                    [255, 220, 0, 180],
+                    [220, 50, 0, 200]    
+                ],
+                elevationScale: 0,
+                elevationRange: [0, 0],
+                opacity: 0.9,
+                extruded: false,
+                pickable: true
             })
         ];
     }, [displayPoints, typeLayer, geojsonData]);
