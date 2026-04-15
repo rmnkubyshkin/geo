@@ -1,3 +1,4 @@
+
 class Deduplicator:
   def dedup (self, pois):
     seen = set()

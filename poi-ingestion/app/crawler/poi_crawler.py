@@ -8,4 +8,9 @@ class POICrawler:
     def crawl_cell(self, h3_cell, category):
         lat, lon = h3.cell_to_latlng(h3_cell)
 
-        return self.client.search_nearby(lat, lon, 500, keyword=category)
+        return self.client.search_nearby(
+            lat,
+            lon,
+            radius=500,
+            keyword=category
+        )
