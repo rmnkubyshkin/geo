@@ -3,40 +3,78 @@ from app.crawler.poi_crawler import POICrawler
 from app.transformers.poi_normalizer import POINormalizer
 from app.transformers.h3_enricher import H3Enricher
 from app.crawler.deduplicator import Deduplicator
+from app.storage.clickhouse_writer import ClickHouseWriter
+import traceback
+import os
+
 
 CATEGORIES = ["restaurant"]
 
 class CityIngestionPipeline:
 
-  def __init__(self):
-     self.grid_builder = CityGridBuilder()
-     self.crawler = POICrawler()
-     self.normalizer = POINormalizer()
-     self.enricher = H3Enricher()
-     self.deduplicator = Deduplicator()
-  
-  def run(self, bbox, category="restaurant"):
-    cells = self.grid_builder.build(bbox, resolution=7)
+    def __init__(self):
+        self.grid_builder = CityGridBuilder()
+        self.crawler = POICrawler()
+        self.normalizer = POINormalizer()
+        self.enricher = H3Enricher()
+        self.deduplicator = Deduplicator()
+        self.ch = ClickHouseWriter(
+            host=os.getenv("CLICKHOUSE_HOST"),
+            port=os.getenv("CLICKHOUSE_PORT"),
+            user=os.getenv("CLICKHOUSE_USER"),
+            password=os.getenv("CLICKHOUSE_PASSWORD"),
+            database=os.getenv("CLICKHOUSE_DB"),
+        )
 
-    print(f"Всего H3 ячеек: {len(cells)}")
+    def run(self, bbox, category="restaurant"):
+        cells = self.grid_builder.build(bbox, resolution=7)
 
-    all_pois = []
+        print(f"Всего H3 ячеек: {len(cells)}")
 
-    for i, cell in enumerate(cells):
-        print(f"[{i+1}/{len(cells)}] Обработка ячейки: {cell}")
+        total_inserted = 0
 
-        raw = self.crawler.crawl_cell(cell, category)
-        print(f"  → найдено raw: {len(raw)}")
+        for i, cell in enumerate(cells):
+            print(f"\n[{i+1}/{len(cells)}] Ячейка: {cell}")
 
-        normalized = self.normalizer.normalize(raw)
-        all_pois.extend(normalized)
+            raw = self.crawler.crawl_cell(cell, category)
+            print(f"  raw: {len(raw)}")
 
-    print("Нормализация завершена")
+            if not raw:
+                print("  → пусто, skip")
+                continue
 
-    enriched = self.enricher.enrich(all_pois)
-    print("H3 enrichment завершён")
+            normalized = []
+            for item in raw:
+                p = self.normalizer.normalize(item)
+                if p:
+                    normalized.append(p)
 
-    deduped = self.deduplicator.deduplicate(enriched)
-    print(f"После дедупликации: {len(deduped)}")
+            if not normalized:
+                print("  → после нормализации пусто")
+                continue
 
-    return deduped
+            enriched = self.enricher.enrich(normalized)
+            deduped = self.deduplicator.dedup(enriched)
+
+            if not deduped:
+                print("  → после дедупа пусто")
+                continue
+            
+            try:
+                self.ch.insert_pois(deduped)
+                inserted = len(deduped)
+                total_inserted += inserted
+
+                print(f"Вставлено: {inserted} | total: {total_inserted}")
+
+            except Exception as e:
+                print(f"Ошибка вставки: {e}")
+                traceback.print_exc()
+                continue 
+
+        print(f"\nГОТОВО. Всего вставлено: {total_inserted}")
+        cells = self.grid_builder.build(bbox, resolution=7)
+        print("DEBUG cells:", len(cells))
+        print("SAMPLE:", cells[:5])
+        return total_inserted
+      

@@ -12,7 +12,7 @@ class GooglePlacesClient:
         
         self.base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 
-    def search_nearby(self, lat, lon, radius=1500, keyword=None):
+    def search_nearby(self, lat, lon, radius=500, keyword=None):
         params = {
             "location": f"{lat},{lon}",
             "radius": radius,

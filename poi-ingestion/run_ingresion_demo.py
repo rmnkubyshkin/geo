@@ -7,18 +7,18 @@ print("__name__ =", __name__)
 def main():
   print("START")
   bbox = {
-        "lat_min": 59.8,
-        "lat_max": 60.0,
-        "lon_min": 30.1,
-        "lon_max": 30.5
+    "lat_min": 59.925,
+    "lat_max": 59.935,
+    "lon_min": 30.300,
+    "lon_max": 30.320
   }
 
   pipeline = CityIngestionPipeline()
 
   pois = pipeline.run(bbox, category="restaurant")
 
-  print(f"Loaded POIs: {len(pois)}")
-  print(pois[:5])
+  print(f"Loaded POIs: {pois}")
+  
 
 if __name__== "__main__":
     main()

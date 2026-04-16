@@ -7,8 +7,8 @@ class H3Enricher:
   def enrich(self, pois):
     for poi in pois:
       poi["h3_index"] = h3.latlng_to_cell(
-        poi["lat"],
-        poi["lon"],
+        poi["latitude"],
+        poi["longitude"],
         self.resolution
       )
     return pois
