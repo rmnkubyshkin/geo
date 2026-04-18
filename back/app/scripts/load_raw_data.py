@@ -164,7 +164,6 @@ def _load_points_to_clickhouse(path: Path) -> None:
             try:
                 h3_index = h3_int.latlng_to_cell(float(lat), float(lon), H3_RESOLUTION)
                 altitude = float(alt) if alt is not None else 0.0
-                
                 if idx < 5:
                     print(f"Точка {idx}:")
                     print(f"  H3 индекс: {h3_index}")

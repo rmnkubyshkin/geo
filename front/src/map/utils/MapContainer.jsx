@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Map, Source, Layer } from 'react-map-gl/maplibre';
 import { Button } from "@mui/material";
 import { GeoJsonLayer } from '@deck.gl/layers';
@@ -19,20 +19,31 @@ export default function MapContainer() {
     const pointsLoading = useAppSelector((state) => state.points.loading);
     const geojsonData = useAppSelector((state) => state.buildings.data);
     const buildingsLoading = useAppSelector((state) => state.buildings.loading);
+    const [key, setKey] = useState(0);
+
 
     useEffect(() => {
         dispatch(loadH3Points(100000));
         dispatch(loadBuildings());
     }, [dispatch]);
 
-    const layers = useMemo(() => {
+    useEffect(() => {
+        if (displayPoints.length > 0) {
+            console.log('Type layer changed to:', typeLayer);
+            setKey(prev => prev + 1);
+        }
+    }, [typeLayer, displayPoints.length]);
+    const mapRef = useRef();
+
+
+const layers = useMemo(() => {
         if (displayPoints.length === 0) return [];
         
         const hexagonConfig = {
             id: `hexagon-${typeLayer}`,
             data: displayPoints,
             getPosition: d => [d.longitude, d.latitude],
-            radius: typeLayer === '3D' ? 3 : 3,
+            radius: typeLayer === '3D' ? 25 : 25,
             radiusUnits: "meters",
             pickable: true,
             colorRange: typeLayer === '3D' 
@@ -45,7 +56,7 @@ export default function MapContainer() {
             new HexagonLayer({
                 ...hexagonConfig,
                 extruded: typeLayer === '3D',
-                getElevation: typeLayer === '3D' ? d => d.altitude || 1 : undefined,
+                getElevation: typeLayer === '3D' ? d => d.altitude || 10 : undefined,
                 elevationScale: typeLayer === '3D' ? 0.5 : 0,
                 elevationRange: typeLayer === '3D' ? [0, 100] : [0, 0]
             })
