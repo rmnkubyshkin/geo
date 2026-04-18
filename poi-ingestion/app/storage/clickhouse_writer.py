@@ -23,13 +23,15 @@ class ClickHouseWriter:
         )
 
     def insert_pois(self, pois):
-
-        
         assert self.client is not None
 
         rows = []
 
-        for p in pois:
+        all_ids = [p["place_id"] for p in pois if p.get("place_id")]
+        existing_ids = self.get_existing_place_ids(all_ids)
+        new_pois = [p for p in pois if p["place_id"] not in existing_ids]
+
+        for p in new_pois:
             try:
                 row = [
                     h3.str_to_int(p["h3_index"]),
@@ -99,3 +101,16 @@ class ClickHouseWriter:
         if isinstance(obj, datetime):
             return obj.isoformat()
         raise TypeError(f"Type not serializable: {type(obj)}")
+    
+    def get_existing_place_ids(self, place_ids):
+        if not place_ids:
+            return set()
+
+        query = """
+            SELECT place_id
+            FROM places_h3
+            WHERE place_id IN %(ids)s
+        """
+
+        result = self.client.query(query, {"ids": tuple(place_ids)})
+        return {row[0] for row in result.result_rows}

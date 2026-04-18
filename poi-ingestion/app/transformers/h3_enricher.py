@@ -1,7 +1,7 @@
 import h3
 
 class H3Enricher:
-  def __init__(self, resolution=7):
+  def __init__(self, resolution=11):
     self.resolution = resolution
 
   def enrich(self, pois):

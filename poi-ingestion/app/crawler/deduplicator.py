@@ -5,8 +5,13 @@ class Deduplicator:
     result = []
 
     for p in pois:
-      if p["place_id"] not in seen:
-        seen.add(p["place_id"])
-        result.append(p)
+        pid = p.get("place_id")
+        if not pid:
+            continue
 
+        if pid in seen:
+            continue
+
+        seen.add(pid)
+        result.append(p)
     return result
