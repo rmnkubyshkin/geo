@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { geoApi } from '../../services/geoApi';
-
 export const loadH3Points = createAsyncThunk(
     'points/loadH3Points',
     async (limit = 100000) => {
@@ -16,14 +15,10 @@ export const loadPlacesByHex = createAsyncThunk(
             console.warn("h3Index is empty");
             return [];
         }
+                console.log('in loadPlacesByHex');
 
-        const res = await fetch(`/api/places/by-h3?h3_index=${h3Index}`);
-
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-
-        return await res.json();
+        const places = await geoApi.fetchPlacesByH3(h3Index);
+        return places;
     }
 );
 

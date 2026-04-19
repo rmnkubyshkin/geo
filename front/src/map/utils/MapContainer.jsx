@@ -6,7 +6,7 @@ import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import DeckGLOverlay from './DeckGLOverlay';
 import { INITIAL_VIEW_STATE, POLYGON_LAYER_STYLE, MAP_STYLE } from './constants';
 import { toggleTypeLayer, setViewState } from '../../store/slices/mapSlice';
-import { loadH3Points, loadPlacesByHex } from '../../store/slices/pointsSlice';
+import { loadH3Points, loadPlacesByHex, setSelectedPlaces } from '../../store/slices/pointsSlice';
 import { setSelectedHex } from '../../store/slices/pointsSlice';
 import { loadBuildings } from '../../store/slices/buildingsSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -24,11 +24,15 @@ export default function MapContainer() {
     const selectedHex = useAppSelector(state => state.points.selectedHex);
 
     const handleHexClick = (info) => {
+
         const hex = info.object;
         if (!hex) return;
         dispatch(setSelectedHex(hex));
         dispatch(loadPlacesByHex(hex.h3Index));
+        //dispatch(setSelectedPlaces(hex));
+
         console.log("CLICK HEX:", hex);
+        console.log("selectedPlaces:", selectedPlaces);
     };
 
     useEffect(() => {
@@ -48,6 +52,7 @@ export default function MapContainer() {
     const layers = useMemo(() => {
         if (displayPoints.length === 0) return [];
         console.log(displayPoints[0])
+        console.log(selectedPlaces)
         const resultLayers = [
             new H3HexagonLayer({
             id: 'h3-layer',
@@ -134,14 +139,14 @@ export default function MapContainer() {
                     <h3>H3: {selectedHex.h3Index}</h3>
 
                     <div>Точек: {selectedHex.pointCount}</div>
-
                     <hr />
 
                    {selectedPlaces?.map(p => (
                         <div key={p.place_id} style={{ marginBottom: 10 }}>
                             <b>{p.name}</b>
-                            <div>⭐ {p.rating}</div>
-                            <div>{p.business_status}</div>
+                            <div>Рейтинг: {p.rating}⭐</div>
+                            <div>Кол-во отзывов: {p.reviews}</div>
+                            <div>Цена: {p.price}</div>
                         </div>
                     ))}
                 </div>

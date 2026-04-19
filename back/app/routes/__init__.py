@@ -117,7 +117,6 @@ def get_h3_indexes_simple():
 @bp.route("/api/points/by-h3", methods=["GET"])
 def get_place_by_h3():
     h3_index = request.args.get("h3_index")
-    
     if not h3_index:
         return jsonify({"error": "h3_index required"}), 400
 
@@ -140,7 +139,7 @@ def get_place_by_h3():
             FROM places_h3
             WHERE h3_index = %(h3)s
             """,
-            {"h3": int(h3_index)}
+            {"h3": int(h3_index, 16)}
         )
 
         data = [
