@@ -27,7 +27,7 @@ class CityIngestionPipeline:
         )
 
     def run(self, bbox, category="restaurant"):
-        cells = self.grid_builder.build(bbox, resolution=7)
+        cells = self.grid_builder.build(bbox, resolution=9)
 
         print(f"Всего H3 ячеек: {len(cells)}")
 

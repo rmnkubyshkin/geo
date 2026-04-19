@@ -7,10 +7,10 @@ print("__name__ =", __name__)
 def main():
   print("START")
   bbox = {
-    "lat_min": 59.925,
-    "lat_max": 59.935,
-    "lon_min": 30.300,
-    "lon_max": 30.320
+      "lat_min": 59.932,
+      "lat_max": 59.948,
+      "lon_min": 30.225,
+      "lon_max": 30.265
   }
 
   pipeline = CityIngestionPipeline()
