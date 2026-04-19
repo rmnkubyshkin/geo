@@ -96,68 +96,69 @@ def get_h3_indexes_simple():
     limit = request.args.get('limit', 10000, type=int)
     
     try:
-        result = ch.client.query(f"SELECT h3_index, altitude FROM places_h3 LIMIT {limit}")
+        result = ch.client.query(
+            """
+            SELECT
+                lower(hex(h3_index)) AS h3_index,
+                count() AS pointCount
+            FROM places_h3
+            GROUP BY h3_index
+            ORDER BY pointCount DESC
+            LIMIT %(limit)s
+            """,
+            {"limit": limit}
+        )
         
-        data = [{"h3Index": str(row[0]), "altitude": row[1]} for row in result.result_rows]
+        data = [{"h3Index": str(row[0]), "pointCount": row[1]} for row in result.result_rows]
         return jsonify(data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@bp.route("/api/places/<place_id>", methods=["GET"])
-def get_place_details(place_id):
+@bp.route("/api/points/by-h3", methods=["GET"])
+def get_place_by_h3():
+    h3_index = request.args.get("h3_index")
+    
+    if not h3_index:
+        return jsonify({"error": "h3_index required"}), 400
+
     if not ch.client:
-        return jsonify({"error": "Database connection error"}), 500
+        return jsonify({"error": "client not initialized"}), 500
 
     try:
-        result = ch.client.query("""
-            SELECT 
+        result = ch.client.query(
+            """
+            SELECT
                 place_id,
-                any(name) as name,
-                any(primary_type) as primary_type,
-                any(types) as types,
+                name,
+                latitude,
+                longitude,
+                rating,
+                user_ratings_total,
+                price_level,
+                open_now,
+                business_status
+            FROM places_h3
+            WHERE h3_index = %(h3)s
+            """,
+            {"h3": int(h3_index)}
+        )
 
-                any(latitude) as latitude,
-                any(longitude) as longitude,
-                any(altitude) as altitude,
+        data = [
+            {
+                "place_id": row[0],
+                "name": row[1],
+                "latitude": row[2],
+                "longitude": row[3],
+                "rating": row[4],
+                "reviews": row[5],
+                "price": row[6],
+                "open_now": row[7],
+                "status": row[8],
+            }
+            for row in result.result_rows
+        ]
 
-                any(rating) as rating,
-                any(user_ratings_total) as user_ratings_total,
-                any(price_level) as price_level,
-
-                any(open_now) as open_now,
-                any(business_status) as business_status,
-
-                any(created_at) as created_at
-            FROM points_h3
-            WHERE place_id = %(place_id)s
-            GROUP BY place_id
-            LIMIT 1
-        """, {"place_id": place_id})
-
-        if not result.result_rows:
-            return jsonify({"error": "Place not found"}), 404
-
-        row = result.result_rows[0]
-
-        return jsonify({
-            "place_id": row[0],
-            "name": row[1],
-            "primary_type": row[2],
-            "types": row[3],
-
-            "latitude": row[4],
-            "longitude": row[5],
-            "altitude": row[6],
-
-            "rating": row[7],
-            "user_ratings_total": row[8],
-            "price_level": row[9],
-
-            "open_now": bool(row[10]),
-            "business_status": row[11],
-
-            "created_at": row[12]
-        })
+        return jsonify(data)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
