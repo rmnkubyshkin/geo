@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { geoApi } from '../../services/geoApi';
-import { getH3Coordinates } from '../../map/utils/h3Utils';
 
 export const loadH3Points = createAsyncThunk(
     'points/loadH3Points',
@@ -10,34 +9,23 @@ export const loadH3Points = createAsyncThunk(
     }
 );
 
-const processDisplayPoints = (points) => {
-    const grouped = {};
-    points.forEach(point => {
-        if (!grouped[point.h3Index]) {
-            const coords = getH3Coordinates(point.h3Index);
-            if (coords) {
-                grouped[point.h3Index] = { 
-                    ...coords, 
-                    altitudes: [], 
-                    count: 0,
-                    h3Index: point.h3Index
-                };
-            }
+export const loadPlacesByHex = createAsyncThunk(
+    'points/loadPlacesByHex',
+    async (h3Index) => {
+        if (!h3Index) {
+            console.warn("h3Index is empty");
+            return [];
         }
-        if (grouped[point.h3Index]) {
-            grouped[point.h3Index].altitudes.push(point.altitude);
-            grouped[point.h3Index].count++;
-        }
-    });
 
-    return Object.values(grouped).map(group => ({
-        longitude: group.longitude,
-        latitude: group.latitude,
-        altitude: group.altitudes.reduce((a, b) => a + b, 0) / group.altitudes.length,
-        h3Index: group.h3Index,
-        pointCount: group.count
-    }));
-};
+        const res = await fetch(`/api/places/by-h3?h3_index=${h3Index}`);
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        return await res.json();
+    }
+);
 
 const pointsSlice = createSlice({
     name: 'points',
@@ -45,13 +33,21 @@ const pointsSlice = createSlice({
         rawPoints: [],
         displayPoints: [],
         loading: false,
-        error: null
+        error: null,
+        selectedHex: null,
+        selectedPlaces: [],
     },
     reducers: {
-      clearPoints: (state) => {
+        clearPoints: (state) => {
           state.rawPoints = [];
           state.displayPoints = [];
-      },
+        },
+        setSelectedHex: (state, action) => {
+            state.selectedHex = action.payload;
+        },
+        setSelectedPlaces: (state, action) => {
+            state.selectedPlaces = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -62,14 +58,16 @@ const pointsSlice = createSlice({
             .addCase(loadH3Points.fulfilled, (state, action) => {
                 state.loading = false;
                 state.rawPoints = action.payload;
-                state.displayPoints = processDisplayPoints(action.payload);
             })
             .addCase(loadH3Points.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.error.message;
+            })
+            .addCase(loadPlacesByHex.fulfilled, (state, action) => {
+                    state.selectedPlaces = action.payload;
             });
     }
 });
 
-export const { clearPoints } = pointsSlice.actions;
+export const { clearPoints, setSelectedHex, setSelectedPlaces } = pointsSlice.actions;
 export default pointsSlice.reducer;

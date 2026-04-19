@@ -2,12 +2,12 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { Map, Source, Layer } from 'react-map-gl/maplibre';
 import { Button } from "@mui/material";
 import { GeoJsonLayer } from '@deck.gl/layers';
-import { HexagonLayer } from "@deck.gl/aggregation-layers";
-
+import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import DeckGLOverlay from './DeckGLOverlay';
 import { INITIAL_VIEW_STATE, POLYGON_LAYER_STYLE, MAP_STYLE } from './constants';
 import { toggleTypeLayer, setViewState } from '../../store/slices/mapSlice';
-import { loadH3Points } from '../../store/slices/pointsSlice';
+import { loadH3Points, loadPlacesByHex } from '../../store/slices/pointsSlice';
+import { setSelectedHex } from '../../store/slices/pointsSlice';
 import { loadBuildings } from '../../store/slices/buildingsSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 
@@ -15,12 +15,21 @@ export default function MapContainer() {
     const dispatch = useAppDispatch();
 
     const typeLayer = useAppSelector((state) => state.map.typeLayer);
-    const displayPoints = useAppSelector((state) => state.points.displayPoints);
+    const displayPoints = useAppSelector(state => state.points.rawPoints);
     const pointsLoading = useAppSelector((state) => state.points.loading);
     const geojsonData = useAppSelector((state) => state.buildings.data);
     const buildingsLoading = useAppSelector((state) => state.buildings.loading);
+    const selectedPlaces = useAppSelector(state => state.points.selectedPlaces);
     const [key, setKey] = useState(0);
+    const selectedHex = useAppSelector(state => state.points.selectedHex);
 
+    const handleHexClick = (info) => {
+        const hex = info.object;
+        if (!hex) return;
+        dispatch(setSelectedHex(hex));
+        dispatch(loadPlacesByHex(hex.h3Index));
+        console.log("CLICK HEX:", hex);
+    };
 
     useEffect(() => {
         dispatch(loadH3Points(100000));
@@ -36,53 +45,49 @@ export default function MapContainer() {
     const mapRef = useRef();
 
 
-const layers = useMemo(() => {
+    const layers = useMemo(() => {
         if (displayPoints.length === 0) return [];
-        
-        const hexagonConfig = {
-            id: `hexagon-${typeLayer}`,
+        console.log(displayPoints[0])
+        const resultLayers = [
+            new H3HexagonLayer({
+            id: 'h3-layer',
             data: displayPoints,
-            getPosition: d => [d.longitude, d.latitude],
-            radius: typeLayer === '3D' ? 25 : 25,
-            radiusUnits: "meters",
-            pickable: true,
-            colorRange: typeLayer === '3D' 
-                ? [[0, 255, 0, 200], [255, 255, 0, 200], [255, 0, 0, 200]]
-                : [[0, 200, 0, 150], [255, 220, 0, 180], [220, 50, 0, 200]],
-            opacity: 0.8
-        };
 
-        const layers = [
-            new HexagonLayer({
-                ...hexagonConfig,
-                extruded: typeLayer === '3D',
-                getElevation: typeLayer === '3D' ? d => d.altitude || 10 : undefined,
-                elevationScale: typeLayer === '3D' ? 0.5 : 0,
-                elevationRange: typeLayer === '3D' ? [0, 100] : [0, 0]
-            })
+            pickable: true,
+            autoHighlight: true,
+
+            getHexagon: d => d.h3Index,
+
+            getFillColor: d => {
+                const count = d.pointCount;
+
+                if (count > 50) return [255, 0, 0, 200];
+                if (count > 20) return [255, 200, 0, 180];
+                return [0, 200, 0, 150];
+            },
+
+            extruded: typeLayer === '3D',
+            getElevation: d => d.pointCount,
+            elevationScale: typeLayer === '3D' ? 10 : 0
+        })
         ];
 
-        
         if (typeLayer === '3D' && geojsonData) {
-            layers.push(new GeoJsonLayer({
-                id: 'buildings-layer',
-                data: geojsonData,
-                extruded: true,
-                getElevation: d => Number(d.properties.height || 0),
-                getFillColor: [180, 180, 180, 180],
-                getLineColor: [255, 255, 255, 200],
-                lineWidthUnits: "pixels",
-                lineWidth: 1,
-                material: {
-                    ambient: 0.6,
-                    diffuse: 0.6,
-                    shininess: 90,
-                    specularColor: [100, 100, 100]
-                }
-            }));
+            resultLayers.push(
+                new GeoJsonLayer({
+                    id: 'buildings-layer',
+                    data: geojsonData,
+                    extruded: true,
+                    getElevation: d => Number(d.properties.height || 0),
+                    getFillColor: [180, 180, 180, 180],
+                    getLineColor: [255, 255, 255, 200],
+                    lineWidthUnits: "pixels",
+                    lineWidth: 1
+                })
+            );
         }
 
-        return layers;
+        return resultLayers;
     }, [displayPoints, typeLayer, geojsonData]);
 
     const handleViewStateChange = (newViewState) => {
@@ -103,14 +108,44 @@ const layers = useMemo(() => {
                 mapStyle={MAP_STYLE}
                 onMove={evt => handleViewStateChange(evt.viewState)}
             >
-                <DeckGLOverlay layers={layers} />                
+                <DeckGLOverlay 
+                    layers={layers} 
+                    onClick={handleHexClick}
+                    controller={true} 
+                />                
                 {typeLayer === '2D' && geojsonData && (
                     <Source id="my-polygons-2d" type="geojson" data={geojsonData}>
                         <Layer {...POLYGON_LAYER_STYLE} />
                     </Source>
                 )}
             </Map>
-            
+            {selectedHex && (
+                <div style={{
+                    position: "absolute",
+                    right: 0,
+                    top: 0,
+                    width: 320,
+                    height: "100%",
+                    background: "white",
+                    overflow: "auto",
+                    zIndex: 1000,
+                    padding: 12
+                }}>
+                    <h3>H3: {selectedHex.h3Index}</h3>
+
+                    <div>Точек: {selectedHex.pointCount}</div>
+
+                    <hr />
+
+                   {selectedPlaces?.map(p => (
+                        <div key={p.place_id} style={{ marginBottom: 10 }}>
+                            <b>{p.name}</b>
+                            <div>⭐ {p.rating}</div>
+                            <div>{p.business_status}</div>
+                        </div>
+                    ))}
+                </div>
+            )}
             <Button
                 onClick={() => dispatch(toggleTypeLayer())}
                 variant="contained"
