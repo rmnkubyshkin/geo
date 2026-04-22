@@ -1,24 +1,23 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { geoApi } from '../../services/geoApi';
+
 export const loadH3Points = createAsyncThunk(
     'points/loadH3Points',
-    async (limit = 100000) => {
-        const points = await geoApi.fetchH3Points(limit);
+    async ({ limit, resolution, bbox }) => {
+        const points = await geoApi.fetchH3Points({ limit, resolution, bbox });
         return points;
     }
 );
 
 export const loadPlacesByHex = createAsyncThunk(
     'points/loadPlacesByHex',
-    async (h3Index) => {
-        if (!h3Index) {
-            console.warn("h3Index is empty");
+    async ({ h3Index, resolution }) => {
+        if (!h3Index || resolution == null) {
+            console.warn("h3Index or resolution is empty");
             return [];
         }
-                console.log('in loadPlacesByHex');
-
-        const places = await geoApi.fetchPlacesByH3(h3Index);
-        return places;
+    const places = await geoApi.fetchPlacesByH3(h3Index, resolution);
+    return places;
     }
 );
 
@@ -59,7 +58,12 @@ const pointsSlice = createSlice({
                 state.error = action.error.message;
             })
             .addCase(loadPlacesByHex.fulfilled, (state, action) => {
+                    console.log('selectedPlaces fulfilled', action.payload);
                     state.selectedPlaces = action.payload;
+            })
+            .addCase(loadPlacesByHex.rejected, (state, action) => {
+                console.error('loadPlacesByHex rejected', action.error);
+                state.error = action.error.message;
             });
     }
 });

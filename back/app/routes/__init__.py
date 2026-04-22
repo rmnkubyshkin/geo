@@ -8,6 +8,7 @@ from app.scripts.timer import timer_decorator
 bp = Blueprint("main", __name__)
 import time
 
+BASE_H3_RESOLUTION = 9
 
 def log_request_time(start_time: float, endpoint: str):
     duration = (time.time() - start_time) * 1000
@@ -94,53 +95,126 @@ def get_h3_indexes_simple():
         return jsonify({"error": "Database connection error"}), 500
     
     limit = request.args.get('limit', 10000, type=int)
+    res = request.args.get('resolution', default=9, type=int)
+    minLat = request.args.get('minLat', type=float)
+    maxLat = request.args.get('maxLat', type=float)
+    minLng = request.args.get('minLng', type=float)
+    maxLng = request.args.get('maxLng', type=float)
     
+    if None in [minLat, maxLat, minLng, maxLng]:
+        return jsonify({"error": "bbox required"}), 400
+    
+    if res > BASE_H3_RESOLUTION:
+        res = BASE_H3_RESOLUTION
+
     try:
-        result = ch.client.query(
+        if res == BASE_H3_RESOLUTION:
+            query = """
+                SELECT
+                    h3_index AS h3_index,
+                    count() AS pointCount
+                FROM places_h3
+                WHERE latitude BETWEEN %(minLat)s AND %(maxLat)s
+                  AND longitude BETWEEN %(minLng)s AND %(maxLng)s
+                GROUP BY h3_index
+                ORDER BY pointCount DESC
+                LIMIT %(limit)s
             """
-            SELECT
-                lower(hex(h3_index)) AS h3_index,
-                count() AS pointCount
-            FROM places_h3
-            GROUP BY h3_index
-            ORDER BY pointCount DESC
-            LIMIT %(limit)s
-            """,
-            {"limit": limit}
+        else:
+            query = """
+                SELECT
+                    h3ToParent(h3_index, %(res)s) AS h3_index,
+                    count() AS pointCount
+                FROM places_h3
+                WHERE latitude BETWEEN %(minLat)s AND %(maxLat)s
+                  AND longitude BETWEEN %(minLng)s AND %(maxLng)s
+                GROUP BY h3_index
+                ORDER BY pointCount DESC
+                LIMIT %(limit)s
+            """
+
+        result = ch.client.query(
+            query,
+            {
+                "limit": limit,
+                "res": res,
+                "minLat": minLat,
+                "maxLat": maxLat,
+                "minLng": minLng,
+                "maxLng": maxLng,
+            }
         )
-        
-        data = [{"h3Index": str(row[0]), "pointCount": row[1]} for row in result.result_rows]
+
+        data = [
+            {
+                "h3Index": format(row[0], "x"),
+                "pointCount": row[1],
+                "resolution": res
+            }
+            for row in result.result_rows
+        ]
         return jsonify(data)
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @bp.route("/api/points/by-h3", methods=["GET"])
 def get_place_by_h3():
     h3_index = request.args.get("h3_index")
-    if not h3_index:
-        return jsonify({"error": "h3_index required"}), 400
+    res = request.args.get("resolution", type=int)
+
+    if not h3_index or res is None:
+        return jsonify({"error": "h3_index and resolution are required"}), 400
 
     if not ch.client:
         return jsonify({"error": "client not initialized"}), 500
 
     try:
-        result = ch.client.query(
+        h3_int = int(h3_index, 16)
+    except ValueError:
+        return jsonify({"error": "invalid h3_index"}), 400
+
+    try:
+        if res > BASE_H3_RESOLUTION:
+            res = BASE_H3_RESOLUTION
+
+        if res == BASE_H3_RESOLUTION:
+            query = """
+                SELECT
+                    place_id,
+                    name,
+                    latitude,
+                    longitude,
+                    rating,
+                    user_ratings_total,
+                    price_level,
+                    open_now,
+                    business_status
+                FROM places_h3
+                WHERE h3_index = %(h3)s
             """
-            SELECT
-                place_id,
-                name,
-                latitude,
-                longitude,
-                rating,
-                user_ratings_total,
-                price_level,
-                open_now,
-                business_status
-            FROM places_h3
-            WHERE h3_index = %(h3)s
-            """,
-            {"h3": int(h3_index, 16)}
-        )
+            params = {"h3": h3_int}
+        else:
+            query = """
+                SELECT
+                    place_id,
+                    name,
+                    latitude,
+                    longitude,
+                    rating,
+                    user_ratings_total,
+                    price_level,
+                    open_now,
+                    business_status
+                FROM places_h3
+                WHERE h3ToParent(h3_index, %(res)s) = %(h3)s
+            """
+            params = {
+                "h3": h3_int,
+                "res": res
+            }
+
+        result = ch.client.query(query, params)
 
         data = [
             {
